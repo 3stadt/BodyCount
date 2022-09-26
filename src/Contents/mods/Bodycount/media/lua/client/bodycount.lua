@@ -118,19 +118,21 @@ function BodyCount.updateLogFiles(pd) -- playerModData
         catCountTotal = catCountTotal + weaponCategoryCount
     end
     BodyCount.overwrite("mod_bodycount_total.txt", catCountTotal)
-    local str = BodyCount.SerializeStats(pd.bodyCount.WeaponCategory)
+    local str = BodyCount.SerializeStatsJson(pd.bodyCount.WeaponCategory)
     BodyCount.overwrite("mod_bodycount_categories.json", str)
-    str = BodyCount.SerializeStats(pd.bodyCount.WeaponType)
+    str = BodyCount.SerializeStatsJson(pd.bodyCount.WeaponType)
     BodyCount.overwrite("mod_bodycount_types.json", str)
+
+    str = BodyCount.SerializeStatsString(pd.bodyCount.WeaponCategory)
+    BodyCount.overwrite("mod_bodycount_categories.txt", str)
+    str = BodyCount.SerializeStatsString(pd.bodyCount.WeaponType)
+    BodyCount.overwrite("mod_bodycount_types.txt", str)
 end
 
 function BodyCount.overwrite(file, text)
-    local done = getFileWriter("BodyCount/.done", true, false)
     local w = getFileWriter(file, true, false)
     w:write(tostring(text))
     w:close()
-    done:write("")
-    done:close()
 end
 
 function BodyCount.exploded(zed)
@@ -167,13 +169,38 @@ function BodyCount.OnExitVehicle(player)
     pd.inVehicle = false
 end
 
-function BodyCount.SerializeStats(table)
+function BodyCount.SerializeStatsJson(table)
     local json = ""
     for k, v in pairs(table) do
         json = json .. "{\"name\": \"" .. k:gsub("^%l", string.upper) .."\", \"quantity\": " .. v .. "},"
     end
     json = string.sub(json, 1, -2) -- remove trailing comma
     return "[" .. json .. "]"
+end
+
+function BodyCount.SerializeStatsString(table)
+    local padlen = 0
+    for k, v in pairs(table) do
+        if #k > padlen then
+            padlen = #k
+        end
+    end
+    padlen = padlen +2 -- add colon and single whitespace
+    local txt = ""
+    for k, v in pairs(table) do
+        local name = k:gsub("^%l", string.upper) .. ": "
+        if #name < padlen then
+            name = string.rpad(name, padlen, " ")
+        end
+        txt = txt .. name .. v .. "\n"
+    end
+    txt = string.sub(txt, 1, -2) -- remove trailing newline
+    return txt
+end
+
+string.rpad = function(str, len, char)
+    if char == nil then char = ' ' end
+    return str .. string.rep(char, len - #str)
 end
 
 function BodyCount.WriteStats()
