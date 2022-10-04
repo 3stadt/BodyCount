@@ -102,7 +102,8 @@ function BodyCount.OnZombieDead(zed)
     BodyCount.updateLogFiles(pd)
 end
 
-function BodyCount.updateLogFiles(pd) -- playerModData
+function BodyCount.updateLogFiles(pd)
+    -- playerModData
     if not pd.bodyCount then
         pd.bodyCount = {}
     end
@@ -169,37 +170,51 @@ function BodyCount.OnExitVehicle(player)
     pd.inVehicle = false
 end
 
-function BodyCount.SerializeStatsJson(table)
+function BodyCount.SerializeStatsJson(stats)
     local json = ""
-    for k, v in pairs(table) do
-        json = json .. "{\"name\": \"" .. k:gsub("^%l", string.upper) .."\", \"quantity\": " .. v .. "},"
+    for k, v in pairs(stats) do
+        json = json .. "{\"name\": \"" .. k:gsub("^%l", string.upper) .. "\", \"quantity\": " .. v .. "},"
     end
     json = string.sub(json, 1, -2) -- remove trailing comma
     return "[" .. json .. "]"
 end
 
-function BodyCount.SerializeStatsString(table)
+function BodyCount.SerializeStatsString(stats)
     local padlen = 0
-    for k, v in pairs(table) do
+    for k, v in pairs(stats) do
         if #k > padlen then
             padlen = #k
         end
     end
-    padlen = padlen +2 -- add colon and single whitespace
+    padlen = padlen + 1 -- account for whitespace
+    local statsTable = {}
+    for k, v in pairs(stats) do
+        table.insert(statsTable, {name = k, quantity = v})
+    end
+    table.sort(statsTable, function(a, b)
+        return a.quantity > b.quantity
+    end)
     local txt = ""
-    for k, v in pairs(table) do
-        local name = k:gsub("^%l", string.upper) .. ": "
+    for k, item in pairs(statsTable) do
+        local name = item.name:gsub("^%l", string.upper) .. " "
         if #name < padlen then
+            local pl = padlen
+            if #tostring(item.quantity) > 1 then
+                pl = pl - #tostring(item.quantity)
+                if pl <= 0 then pl = 0 end
+            end
             name = string.rpad(name, padlen, " ")
         end
-        txt = txt .. name .. v .. "\n"
+        txt = txt .. name .. item.quantity .. "\n"
     end
     txt = string.sub(txt, 1, -2) -- remove trailing newline
     return txt
 end
 
 string.rpad = function(str, len, char)
-    if char == nil then char = ' ' end
+    if char == nil then
+        char = ' '
+    end
     return str .. string.rep(char, len - #str)
 end
 
