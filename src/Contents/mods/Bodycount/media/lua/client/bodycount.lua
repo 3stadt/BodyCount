@@ -128,6 +128,17 @@ function BodyCount.updateLogFiles(pd)
     BodyCount.overwrite("mod_bodycount_categories.txt", str)
     str = BodyCount.SerializeStatsString(pd.bodyCount.WeaponType)
     BodyCount.overwrite("mod_bodycount_types.txt", str)
+    local top5counter = 0
+    local top5str = ""
+    for line in str:gmatch("([^\n]*)\n?") do
+        top5str = top5str .. line .. "\n"
+        top5counter = top5counter + 1
+        if top5counter >= 5 then
+            break
+        end
+    end
+    top5str = string.sub(top5str, 1, -2) -- remove trailing whitespace
+    BodyCount.overwrite("mod_bodycount_types_top5.txt", top5str)
 end
 
 function BodyCount.overwrite(file, text)
@@ -189,7 +200,7 @@ function BodyCount.SerializeStatsString(stats)
     padlen = padlen + 1 -- account for whitespace
     local statsTable = {}
     for k, v in pairs(stats) do
-        table.insert(statsTable, {name = k, quantity = v})
+        table.insert(statsTable, { name = k, quantity = v })
     end
     table.sort(statsTable, function(a, b)
         return a.quantity > b.quantity
@@ -201,7 +212,9 @@ function BodyCount.SerializeStatsString(stats)
             local pl = padlen
             if #tostring(item.quantity) > 1 then
                 pl = pl - #tostring(item.quantity)
-                if pl <= 0 then pl = 0 end
+                if pl <= 0 then
+                    pl = 0
+                end
             end
             name = string.rpad(name, padlen, " ")
         end
