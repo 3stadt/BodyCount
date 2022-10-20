@@ -67,10 +67,28 @@ end
 
 function BodyCount.OnZombieDead(zed)
     local player = getPlayer()
+    local m = getGameTime():getMonth()
+    local d = getGameTime():getDay()
     local pd = player:getModData()
 
+    if not pd.bodyCount.DailyStats then
+        pd.bodyCount.DailyStats = {}
+    end
+
+    if not pd.bodyCount.DailyStats[m] then
+        pd.bodyCount.DailyStats[m] = {}
+    end
+
+    if not pd.bodyCount.DailyStats[m][d] then
+        pd.bodyCount.DailyStats[m][d] = 0
+    end
+
+    pd.bodyCount.DailyStats[m][d] = pd.bodyCount.DailyStats[m][d] + 1
+
+    print(pd.bodyCount.DailyStats)
+
     local zedBurning = zed:isOnFire()
-    if (pd.inVehicle or zedBurning) and not(BodyCount.damageLog.xpEvent) then
+    if (pd.inVehicle or zedBurning) and not (BodyCount.damageLog.xpEvent) then
         local weaponCategory = "vehicle"
         local weaponType = "vehicle"
 
@@ -112,6 +130,9 @@ function BodyCount.updateLogFiles(pd)
     if not pd.bodyCount.WeaponType then
         pd.bodyCount.WeaponType = {}
     end
+    if not pd.bodyCount.DailyStats then
+        pd.bodyCount.DailyStats = {}
+    end
 
     local catCountTotal = 0
     for cat, weaponCategoryCount in pairs(pd.bodyCount.WeaponCategory) do
@@ -122,6 +143,8 @@ function BodyCount.updateLogFiles(pd)
     BodyCount.overwrite("mod_bodycount_categories.json", str)
     str = BodyCount.SerializeStatsJson(pd.bodyCount.WeaponType)
     BodyCount.overwrite("mod_bodycount_types.json", str)
+    str = BodyCount.SerializeChartStatsJson(pd.bodyCount.DailyStats)
+    BodyCount.overwrite("mod_bodycount_per_day_data.txt", str)
 
     str = BodyCount.SerializeStatsString(pd.bodyCount.WeaponCategory)
     BodyCount.overwrite("mod_bodycount_categories.txt", str)
@@ -180,6 +203,18 @@ function BodyCount.OnExitVehicle(player)
     pd.inVehicle = false
 end
 
+function BodyCount.SerializeChartStatsJson(stats)
+    local jsonData = ""
+    local jsonLabels = ""
+    for m, data in pairs(stats) do
+        for k, v in pairs(data) do
+            jsonData = jsonData .."{x:'"..k.."."..m..".', y:".. v .. "},"
+        end
+    end
+    jsonData = string.sub(jsonData, 1, -2) -- remove trailing comma
+    return "[" .. jsonData .. "]"
+end
+
 function BodyCount.SerializeStatsJson(stats)
     local json = ""
     for k, v in pairs(stats) do
@@ -230,6 +265,24 @@ string.rpad = function(str, len, char)
     return str .. string.rep(char, len - #str)
 end
 
+function BodyCount.EveryDays()
+    local m = getGameTime():getMonth()
+    local d = getGameTime():getDay()
+    local pd = player:getModData()
+
+    if not pd.bodyCount.DailyStats then
+        pd.bodyCount.DailyStats = {}
+    end
+
+    if not pd.bodyCount.DailyStats[m] then
+        pd.bodyCount.DailyStats[m] = {}
+    end
+
+    if not pd.bodyCount.DailyStats[m][d] then
+        pd.bodyCount.DailyStats[m][d] = 0
+    end
+end
+
 function BodyCount.WriteStats()
     local player = getPlayer()
     local pd = player:getModData()
@@ -257,3 +310,4 @@ Events.OnWeaponHitXp.Add(BodyCount.OnWeaponHitXp)
 Events.OnPlayerUpdate.Add(BodyCount.OnPlayerUpdate)
 Events.OnEnterVehicle.Add(BodyCount.OnEnterVehicle)
 Events.OnExitVehicle.Add(BodyCount.OnExitVehicle)
+Events.EveryDays.Add(BodyCount.EveryDays)
