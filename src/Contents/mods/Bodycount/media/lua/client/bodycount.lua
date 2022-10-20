@@ -70,8 +70,7 @@ function BodyCount.OnZombieDead(zed)
     local pd = player:getModData()
 
     local zedBurning = zed:isOnFire()
-    if pd.inVehicle or zedBurning then
-        -- If player is in vehicle or zombie burned the XP event is not triggered
+    if (pd.inVehicle or zedBurning) and not(BodyCount.damageLog.xpEvent) then
         local weaponCategory = "vehicle"
         local weaponType = "vehicle"
 
