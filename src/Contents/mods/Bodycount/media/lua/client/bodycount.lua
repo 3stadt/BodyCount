@@ -281,6 +281,8 @@ function BodyCount.EveryDays()
     if not pd.bodyCount.DailyStats[m][d] then
         pd.bodyCount.DailyStats[m][d] = 0
     end
+
+    BodyCount.WriteStats()
 end
 
 function BodyCount.WriteStats()
