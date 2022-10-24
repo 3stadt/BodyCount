@@ -69,21 +69,26 @@ function BodyCount.OnZombieDead(zed)
     local player = getPlayer()
     local m = getGameTime():getMonth()
     local d = getGameTime():getDay()
+    local y = getGameTime():getYear()
     local pd = player:getModData()
 
     if not pd.bodyCount.DailyStats then
         pd.bodyCount.DailyStats = {}
     end
 
-    if not pd.bodyCount.DailyStats[m] then
-        pd.bodyCount.DailyStats[m] = {}
+    if not pd.bodyCount.DailyStats[y] then
+        pd.bodyCount.DailyStats[y] = {}
     end
 
-    if not pd.bodyCount.DailyStats[m][d] then
-        pd.bodyCount.DailyStats[m][d] = 0
+    if not pd.bodyCount.DailyStats[y][m] then
+        pd.bodyCount.DailyStats[y][m] = {}
     end
 
-    pd.bodyCount.DailyStats[m][d] = pd.bodyCount.DailyStats[m][d] + 1
+    if not pd.bodyCount.DailyStats[y][m][d] then
+        pd.bodyCount.DailyStats[y][m][d] = 0
+    end
+
+    pd.bodyCount.DailyStats[y][m][d] = pd.bodyCount.DailyStats[y][m][d] + 1
 
     print(pd.bodyCount.DailyStats)
 
@@ -140,27 +145,30 @@ function BodyCount.updateLogFiles(pd)
     end
     BodyCount.overwrite("mod_bodycount_total.txt", catCountTotal)
     local str = BodyCount.SerializeStatsJson(pd.bodyCount.WeaponCategory)
+
+    -- JSON outbup for use with Bodycount Server
     BodyCount.overwrite("mod_bodycount_categories.json", str)
     str = BodyCount.SerializeStatsJson(pd.bodyCount.WeaponType)
     BodyCount.overwrite("mod_bodycount_types.json", str)
     str = BodyCount.SerializeChartStatsJson(pd.bodyCount.DailyStats)
     BodyCount.overwrite("mod_bodycount_per_day_data.txt", str)
 
-    str = BodyCount.SerializeStatsString(pd.bodyCount.WeaponCategory)
-    BodyCount.overwrite("mod_bodycount_categories.txt", str)
-    str = BodyCount.SerializeStatsString(pd.bodyCount.WeaponType)
-    BodyCount.overwrite("mod_bodycount_types.txt", str)
-    local top5counter = 0
-    local top5str = ""
-    for line in str:gmatch("([^\n]*)\n?") do
-        top5str = top5str .. line .. "\n"
-        top5counter = top5counter + 1
-        if top5counter >= 5 then
-            break
-        end
-    end
-    top5str = string.sub(top5str, 1, -2) -- remove trailing whitespace
-    BodyCount.overwrite("mod_bodycount_types_top5.txt", top5str)
+    -- OLD: txt data for direct display in OBS, see json above
+    --str = BodyCount.SerializeStatsString(pd.bodyCount.WeaponCategory)
+    --BodyCount.overwrite("mod_bodycount_categories.txt", str)
+    --str = BodyCount.SerializeStatsString(pd.bodyCount.WeaponType)
+    --BodyCount.overwrite("mod_bodycount_types.txt", str)
+    --local top5counter = 0
+    --local top5str = ""
+    --for line in str:gmatch("([^\n]*)\n?") do
+    --    top5str = top5str .. line .. "\n"
+    --    top5counter = top5counter + 1
+    --    if top5counter >= 5 then
+    --       break
+    --    end
+    --end
+    --top5str = string.sub(top5str, 1, -2) -- remove trailing whitespace
+    --BodyCount.overwrite("mod_bodycount_types_top5.txt", top5str)
 end
 
 function BodyCount.overwrite(file, text)
@@ -205,10 +213,11 @@ end
 
 function BodyCount.SerializeChartStatsJson(stats)
     local jsonData = ""
-    local jsonLabels = ""
-    for m, data in pairs(stats) do
-        for k, v in pairs(data) do
-            jsonData = jsonData .."{x:'"..k.."."..m..".', y:".. v .. "},"
+    for y, monthData in pairs(stats) do
+        for m, dayData in pairs(monthData) do
+            for d, count in pairs(dayData) do
+                jsonData = jsonData .. "{\"x\":\"" .. d .. "." .. m .. ". " .. y .. "\", \"y\":" .. count .. "},"
+            end
         end
     end
     jsonData = string.sub(jsonData, 1, -2) -- remove trailing comma
@@ -268,26 +277,50 @@ end
 function BodyCount.EveryDays()
     local m = getGameTime():getMonth()
     local d = getGameTime():getDay()
+    local y = getGameTime():getYear()
     local pd = player:getModData()
 
     if not pd.bodyCount.DailyStats then
         pd.bodyCount.DailyStats = {}
     end
 
-    if not pd.bodyCount.DailyStats[m] then
-        pd.bodyCount.DailyStats[m] = {}
+    if not pd.bodyCount.DailyStats[y] then
+        pd.bodyCount.DailyStats[y] = {}
     end
 
-    if not pd.bodyCount.DailyStats[m][d] then
-        pd.bodyCount.DailyStats[m][d] = 0
+    if not pd.bodyCount.DailyStats[y][m] then
+        pd.bodyCount.DailyStats[y][m] = {}
+    end
+
+    if not pd.bodyCount.DailyStats[y][m][d] then
+        pd.bodyCount.DailyStats[y][m][d] = 0
     end
 
     BodyCount.WriteStats()
 end
 
+function BodyCount.GetMinKey(tbl)
+    local minKey = math.huge
+    for k in pairs(tbl) do
+        minKey = math.min(k, minKey)
+    end
+    return minKey
+end
+
 function BodyCount.WriteStats()
     local player = getPlayer()
     local pd = player:getModData()
+
+    -- remove data on upgrade from previous system not saving the year, thus having only two layers + an int
+    if pd.bodyCount.DailyStats then
+        local layerOne = BodyCount.GetMinKey(pd.bodyCount.DailyStats)
+        local layerTwo = BodyCount.GetMinKey(pd.bodyCount.DailyStats[layerOne])
+
+        if (type(layerTwo) ~= 'table') then
+            pd.bodyCount.DailyStats = {} -- reset data
+        end
+    end
+
     BodyCount.updateLogFiles(pd)
 end
 
