@@ -72,15 +72,15 @@ function BodyCount.OnZombieDead(zed)
     local y = getGameTime():getYear()
     local pd = player:getModData()
 
-    if not pd.bodyCount.DailyStats then
+    if type(pd.bodyCount.DailyStats) ~= "table" then
         pd.bodyCount.DailyStats = {}
     end
 
-    if not pd.bodyCount.DailyStats[y] then
+    if type(pd.bodyCount.DailyStats[y]) ~= "table" then
         pd.bodyCount.DailyStats[y] = {}
     end
 
-    if not pd.bodyCount.DailyStats[y][m] then
+    if type(pd.bodyCount.DailyStats[y][m])  ~= "table" then
         pd.bodyCount.DailyStats[y][m] = {}
     end
 
@@ -89,8 +89,6 @@ function BodyCount.OnZombieDead(zed)
     end
 
     pd.bodyCount.DailyStats[y][m][d] = pd.bodyCount.DailyStats[y][m][d] + 1
-
-    print(pd.bodyCount.DailyStats)
 
     local zedBurning = zed:isOnFire()
     if (pd.inVehicle or zedBurning) and not (BodyCount.damageLog.xpEvent) then
@@ -126,16 +124,16 @@ end
 
 function BodyCount.updateLogFiles(pd)
     -- playerModData
-    if not pd.bodyCount then
+    if type(pd.bodyCount) ~= "table" then
         pd.bodyCount = {}
     end
-    if not pd.bodyCount.WeaponCategory then
+    if type(pd.bodyCount.WeaponCategory) ~= "table" then
         pd.bodyCount.WeaponCategory = {}
     end
-    if not pd.bodyCount.WeaponType then
+    if type(pd.bodyCount.WeaponType) ~= "table" then
         pd.bodyCount.WeaponType = {}
     end
-    if not pd.bodyCount.DailyStats then
+    if type(pd.bodyCount.DailyStats) ~= "table" then
         pd.bodyCount.DailyStats = {}
     end
 
@@ -153,22 +151,6 @@ function BodyCount.updateLogFiles(pd)
     str = BodyCount.SerializeChartStatsJson(pd.bodyCount.DailyStats)
     BodyCount.overwrite("mod_bodycount_per_day_data.txt", str)
 
-    -- OLD: txt data for direct display in OBS, see json above
-    --str = BodyCount.SerializeStatsString(pd.bodyCount.WeaponCategory)
-    --BodyCount.overwrite("mod_bodycount_categories.txt", str)
-    --str = BodyCount.SerializeStatsString(pd.bodyCount.WeaponType)
-    --BodyCount.overwrite("mod_bodycount_types.txt", str)
-    --local top5counter = 0
-    --local top5str = ""
-    --for line in str:gmatch("([^\n]*)\n?") do
-    --    top5str = top5str .. line .. "\n"
-    --    top5counter = top5counter + 1
-    --    if top5counter >= 5 then
-    --       break
-    --    end
-    --end
-    --top5str = string.sub(top5str, 1, -2) -- remove trailing whitespace
-    --BodyCount.overwrite("mod_bodycount_types_top5.txt", top5str)
 end
 
 function BodyCount.overwrite(file, text)
@@ -278,17 +260,18 @@ function BodyCount.EveryDays()
     local m = getGameTime():getMonth()
     local d = getGameTime():getDay()
     local y = getGameTime():getYear()
+    local player = getPlayer()
     local pd = player:getModData()
 
-    if not pd.bodyCount.DailyStats then
+    if type(pd.bodyCount.DailyStats) ~= "table" then
         pd.bodyCount.DailyStats = {}
     end
 
-    if not pd.bodyCount.DailyStats[y] then
+    if type(pd.bodyCount.DailyStats[y]) ~= "table" then
         pd.bodyCount.DailyStats[y] = {}
     end
 
-    if not pd.bodyCount.DailyStats[y][m] then
+    if type(pd.bodyCount.DailyStats[y][m])  ~= "table" then
         pd.bodyCount.DailyStats[y][m] = {}
     end
 
@@ -310,16 +293,6 @@ end
 function BodyCount.WriteStats()
     local player = getPlayer()
     local pd = player:getModData()
-
-    -- remove data on upgrade from previous system not saving the year, thus having only two layers + an int
-    if pd.bodyCount.DailyStats then
-        local layerOne = BodyCount.GetMinKey(pd.bodyCount.DailyStats)
-        local layerTwo = BodyCount.GetMinKey(pd.bodyCount.DailyStats[layerOne])
-
-        if (type(layerTwo) ~= 'table') then
-            pd.bodyCount.DailyStats = {} -- reset data
-        end
-    end
 
     BodyCount.updateLogFiles(pd)
 end
