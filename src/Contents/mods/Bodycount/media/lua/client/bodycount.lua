@@ -91,7 +91,8 @@ function BodyCount.OnZombieDead(zed)
     pd.bodyCount.DailyStats[y][m][d] = pd.bodyCount.DailyStats[y][m][d] + 1
 
     local zedBurning = zed:isOnFire()
-    if (pd.inVehicle or zedBurning) and not (BodyCount.damageLog.xpEvent) then
+    local isXpEvent = BodyCount.damageLog.xpEvent
+    if (pd.inVehicle or zedBurning) and isXpEvent == false then
         local weaponCategory = "vehicle"
         local weaponType = "vehicle"
 
@@ -117,7 +118,7 @@ function BodyCount.OnZombieDead(zed)
         damageLog.timestampDead = getTimestampMs()
         damageLog.dead = true
     end
-    BodyCount.xpEvent = false
+    BodyCount.damageLog.xpEvent = false
 
     BodyCount.updateLogFiles(pd)
 end
@@ -197,8 +198,12 @@ function BodyCount.SerializeChartStatsJson(stats)
     local jsonData = ""
     for y, monthData in pairs(stats) do
         for m, dayData in pairs(monthData) do
-            for d, count in pairs(dayData) do
-                jsonData = jsonData .. "{\"x\":\"" .. d .. "." .. m .. ". " .. y .. "\", \"y\":" .. count .. "},"
+            if type(dayData) ~= "table" then -- LEGACY compatability  
+                jsonData = jsonData .. "{\"date\":\"" .. m .. "." .. y .. ". 1992\", \"count\":" .. dayData .. "},"
+            else
+                for d, count in pairs(dayData) do
+                    jsonData = jsonData .. "{\"date\":\"" .. d .. "." .. m .. ". " .. y .. "\", \"count\":" .. count .. "},"
+                end
             end
         end
     end
